@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DATAPOLIS v4.0 - Demo Interactiva</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 12px 24px rgba(0,0,0,0.15); }
+        .sidebar-item:hover { background: rgba(255,255,255,0.1); }
+        .sidebar-item.active { background: rgba(255,255,255,0.2); border-left: 3px solid #10b981; }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // ============================================================
+        // DATOS DE EJEMPLO
+        // ============================================================
+        const sampleHedonicData = {
+            coefficients: [
+                { variable: 'const', coefficient: 45000000, std_error: 5200000, t_stat: 8.65, p_value: 0.000, significant: true, implicit_price: null },
+                { variable: 'superficie_m2', coefficient: 820000, std_error: 45000, t_stat: 18.22, p_value: 0.000, significant: true, implicit_price: 820000 },
+                { variable: 'dormitorios', coefficient: 12500000, std_error: 1800000, t_stat: 6.94, p_value: 0.000, significant: true, implicit_price: 12500000 },
+                { variable: 'baños', coefficient: 8200000, std_error: 2100000, t_stat: 3.90, p_value: 0.001, significant: true, implicit_price: 8200000 },
+                { variable: 'distancia_metro', coefficient: -18500, std_error: 3200, t_stat: -5.78, p_value: 0.000, significant: true, implicit_price: -18500 },
+                { variable: 'antiguedad', coefficient: -450000, std_error: 180000, t_stat: -2.50, p_value: 0.015, significant: true, implicit_price: -450000 },
+            ],
+            diagnostics: { r_squared: 0.847, adj_r_squared: 0.839, aic: 2456, bic: 2478, durbin_watson: 1.92, f_statistic: 98.4 },
+            vif: { superficie_m2: 1.8, dormitorios: 2.4, baños: 1.9, distancia_metro: 1.3, antiguedad: 1.2 }
+        };
+
+        const ecosystemBiomes = [
+            { name: 'Bosque Tropical', value: 6275, color: '#059669' },
+            { name: 'Humedal', value: 8870, color: '#0891b2' },
+            { name: 'Área Verde Urbana', value: 5810, color: '#65a30d' },
+            { name: 'Zona Costera', value: 7665, color: '#0284c7' },
+            { name: 'Pradera', value: 1680, color: '#ca8a04' },
+        ];
+
+        const advisorMethods = [
+            { name: 'Comparación de Mercado', score: 87, compliance: ['IVS', 'RICS', 'Basel'] },
+            { name: 'Capitalización de Ingresos', score: 72, compliance: ['IVS', 'RICS'] },
+            { name: 'Precios Hedónicos', score: 68, compliance: ['IVS'] },
+            { name: 'ML Ensemble', score: 65, compliance: ['Basel'] },
+        ];
+
+        // ============================================================
+        // COMPONENTES
+        // ============================================================
+        
+        // Sidebar
+        const Sidebar = ({ currentView, setCurrentView }) => {
+            const menuItems = [
+                { id: 'dashboard', label: 'Dashboard', icon: '📊' },
+                { id: 'hedonic', label: 'Análisis Hedónico', icon: '📈', badge: 'v4.0' },
+                { id: 'ecosystem', label: 'Servicios Ecosistémicos', icon: '🌿', badge: 'v4.0' },
+                { id: 'advisor', label: 'Asistente Valuación', icon: '🎯', badge: 'v4.0' },
+                { id: 'natural-capital', label: 'Capital Natural', icon: '🌍', badge: 'v4.0' },
+                { id: 'env-hub', label: 'Environmental Hub', icon: '🗺️', badge: 'v4.0' },
+            ];
+
+            const v3Items = [
+                { id: 'expedientes', label: 'Expedientes', icon: '📁' },
+                { id: 'copropiedades', label: 'Copropiedades', icon: '🏢' },
+                { id: 'plusvalia', label: 'Plusvalías', icon: '💰' },
+                { id: 'credit', label: 'Credit Scoring', icon: '💳' },
+            ];
+
+            return (
+                <div className="w-64 bg-gray-900 text-white min-h-screen flex flex-col">
+                    <div className="p-4 border-b border-gray-800">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg gradient-bg flex items-center justify-center font-bold text-lg">D</div>
+                            <div>
+                                <div className="font-bold">DATAPOLIS</div>
+                                <div className="text-xs text-gray-400">v4.0.0 Hedonic Edition</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="flex-1 py-4">
+                        <div className="px-4 text-xs text-gray-500 uppercase tracking-wider mb-2">Módulos v4.0</div>
+                        {menuItems.map(item => (
+                            <div
+                                key={item.id}
+                                onClick={() => setCurrentView(item.id)}
+                                className={`sidebar-item px-4 py-3 cursor-pointer flex items-center gap-3 transition ${currentView === item.id ? 'active' : ''}`}
+                            >
+                                <span className="text-xl">{item.icon}</span>
+                                <span className="flex-1">{item.label}</span>
+                                {item.badge && <span className="text-xs bg-green-600 px-2 py-0.5 rounded">{item.badge}</span>}
+                            </div>
+                        ))}
+                        
+                        <div className="px-4 text-xs text-gray-500 uppercase tracking-wider mb-2 mt-6">Módulos v3.0</div>
+                        {v3Items.map(item => (
+                            <div
+                                key={item.id}
+                                onClick={() => setCurrentView(item.id)}
+                                className={`sidebar-item px-4 py-3 cursor-pointer flex items-center gap-3 transition opacity-60 ${currentView === item.id ? 'active opacity-100' : ''}`}
+                            >
+                                <span className="text-xl">{item.icon}</span>
+                                <span>{item.label}</span>
+                            </div>
+                        ))}
+                    </div>
+                    
+                    <div className="p-4 border-t border-gray-800">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-sm">DA</div>
+                            <div className="flex-1">
+                                <div className="text-sm font-medium">Daniel Architect</div>
+                                <div className="text-xs text-gray-400">Admin</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Dashboard View
+        const DashboardView = () => (
+            <div className="p-6">
+                <h1 className="text-2xl font-bold text-gray-800 mb-6">Dashboard DATAPOLIS v4.0</h1>
+                
+                <div className="grid grid-cols-4 gap-4 mb-6">
+                    {[
+                        { label: 'Expedientes Activos', value: '247', change: '+12%', color: 'blue' },
+                        { label: 'Valuaciones Mes', value: '89', change: '+8%', color: 'green' },
+                        { label: 'Score ESG Promedio', value: '78', change: '+5pts', color: 'emerald' },
+                        { label: 'Capital Natural USD', value: '$2.4M', change: '+15%', color: 'purple' },
+                    ].map((stat, i) => (
+                        <div key={i} className="bg-white rounded-xl shadow-sm p-4 card-hover transition">
+                            <div className="text-sm text-gray-500">{stat.label}</div>
+                            <div className="text-2xl font-bold text-gray-800 mt-1">{stat.value}</div>
+                            <div className={`text-sm text-${stat.color}-600 mt-1`}>{stat.change} vs mes anterior</div>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="grid grid-cols-3 gap-6">
+                    <div className="col-span-2 bg-white rounded-xl shadow-sm p-6">
+                        <h3 className="font-semibold text-gray-800 mb-4">Módulos v4.0 - Nuevas Capacidades</h3>
+                        <div className="grid grid-cols-2 gap-4">
+                            {[
+                                { name: 'M-HED Hedonic', desc: 'Precios hedónicos espaciales', status: 'Activo', color: 'green' },
+                                { name: 'M-ESV Ecosystem', desc: 'Servicios ecosistémicos', status: 'Activo', color: 'green' },
+                                { name: 'M-NCA Natural Capital', desc: 'Contabilidad SEEA-EA', status: 'Activo', color: 'green' },
+                                { name: 'M-VAD Advisor', desc: 'Recomendación de métodos', status: 'Activo', color: 'green' },
+                            ].map((mod, i) => (
+                                <div key={i} className="border rounded-lg p-4 flex items-center gap-4">
+                                    <div className={`w-3 h-3 rounded-full bg-${mod.color}-500`}></div>
+                                    <div className="flex-1">
+                                        <div className="font-medium text-gray-800">{mod.name}</div>
+                                        <div className="text-sm text-gray-500">{mod.desc}</div>
+                                    </div>
+                                    <span className={`text-xs px-2 py-1 rounded bg-${mod.color}-100 text-${mod.color}-700`}>{mod.status}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    
+                    <div className="bg-white rounded-xl shadow-sm p-6">
+                        <h3 className="font-semibold text-gray-800 mb-4">Compliance</h3>
+                        <div className="space-y-3">
+                            {[
+                                { name: 'NCG 514 CMF', status: '100%' },
+                                { name: 'Basel IV', status: '100%' },
+                                { name: 'Ley 21.713', status: '100%' },
+                                { name: 'TNFD', status: '85%' },
+                                { name: 'SEEA-EA', status: '90%' },
+                            ].map((c, i) => (
+                                <div key={i} className="flex items-center justify-between">
+                                    <span className="text-sm text-gray-600">{c.name}</span>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                            <div className="h-full bg-green-500 rounded-full" style={{width: c.status}}></div>
+                                        </div>
+                                        <span className="text-xs text-gray-500 w-10">{c.status}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+
+        // Hedonic Panel View
+        const HedonicView = () => {
+            const [modelType, setModelType] = useState('log_linear');
+            const [showResults, setShowResults] = useState(true);
+
+            return (
+                <div className="p-6">
+                    <div className="flex items-center justify-between mb-6">
+                        <div>
+                            <h1 className="text-2xl font-bold text-gray-800">Análisis Hedónico de Precios</h1>
+                            <p className="text-gray-500">Modelos de precios hedónicos espaciales</p>
+                        </div>
+                        <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">M-HED v4.0</span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-6">
+                        <div className="space-y-4">
+                            <div className="bg-white rounded-xl shadow-sm p-4">
+                                <h3 className="font-semibold text-gray-800 mb-4">Configuración del Modelo</h3>
+                                
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Modelo</label>
+                                        <select 
+                                            value={modelType} 
+                                            onChange={(e) => setModelType(e.target.value)}
+                                            className="w-full border rounded-lg p-2.5"
+                                        >
+                                            <option value="ols_linear">OLS Lineal</option>
+                                            <option value="log_linear">Log-Lineal</option>
+                                            <option value="log_log">Log-Log</option>
+                                            <option value="box_cox">Box-Cox</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Variables Independientes</label>
+                                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                                            {['superficie_m2', 'dormitorios', 'baños', 'distancia_metro', 'antiguedad', 'piso', 'estacionamientos'].map(v => (
+                                                <label key={v} className="flex items-center gap-2 text-sm">
+                                                    <input type="checkbox" defaultChecked={['superficie_m2', 'dormitorios', 'baños', 'distancia_metro', 'antiguedad'].includes(v)} className="rounded" />
+                                                    <span>{v.replace('_', ' ')}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <button 
+                                        onClick={() => setShowResults(true)}
+                                        className="w-full bg-blue-600 text-white py-2.5 rounded-lg font-medium hover:bg-blue-700 transition"
+                                    >
+                                        Estimar Modelo
+                                    </button>
+                                </div>
+                            </div>
+
+                            {showResults && (
+                                <div className="bg-white rounded-xl shadow-sm p-4">
+                                    <h3 className="font-semibold text-gray-800 mb-3">Diagnósticos</h3>
+                                    <div className="space-y-2 text-sm">
+                                        <div className="flex justify-between"><span className="text-gray-600">R²:</span><span className="font-medium">0.847</span></div>
+                                        <div className="flex justify-between"><span className="text-gray-600">R² Ajustado:</span><span className="font-medium">0.839</span></div>
+                                        <div className="flex justify-between"><span className="text-gray-600">AIC:</span><span className="font-medium">2,456</span></div>
+                                        <div className="flex justify-between"><span className="text-gray-600">Durbin-Watson:</span><span className="font-medium">1.92</span></div>
+                                        <div className="flex justify-between"><span className="text-gray-600">F-statistic:</span><span className="font-medium">98.4</span></div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="col-span-2 space-y-4">
+                            {showResults && (
+                                <>
+                                    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+                                        <div className="px-4 py-3 bg-gray-50 border-b">
+                                            <h3 className="font-semibold text-gray-800">Coeficientes Estimados</h3>
+                                            <p className="text-sm text-gray-500">Modelo: Log-Lineal | N = 342 observaciones</p>
+                                        </div>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full">
+                                                <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
+                                                    <tr>
+                                                        <th className="px-4 py-2 text-left">Variable</th>
+                                                        <th className="px-4 py-2 text-right">Coeficiente</th>
+                                                        <th className="px-4 py-2 text-right">Std. Error</th>
+                                                        <th className="px-4 py-2 text-right">t-stat</th>
+                                                        <th className="px-4 py-2 text-right">p-value</th>
+                                                        <th className="px-4 py-2 text-center">Sig.</th>
+                                                        <th className="px-4 py-2 text-right">Precio Implícito</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y">
+                                                    {sampleHedonicData.coefficients.map((c, i) => (
+                                                        <tr key={i} className={c.significant ? 'bg-green-50' : ''}>
+                                                            <td className="px-4 py-2 font-medium">{c.variable}</td>
+                                                            <td className="px-4 py-2 text-right">{c.coefficient.toLocaleString()}</td>
+                                                            <td className="px-4 py-2 text-right text-gray-500">{c.std_error.toLocaleString()}</td>
+                                                            <td className="px-4 py-2 text-right">{c.t_stat.toFixed(2)}</td>
+                                                            <td className="px-4 py-2 text-right">{c.p_value < 0.001 ? '< 0.001' : c.p_value.toFixed(3)}</td>
+                                                            <td className="px-4 py-2 text-center">{c.significant && <span className="text-green-600">✓</span>}</td>
+                                                            <td className="px-4 py-2 text-right">{c.implicit_price ? `$${c.implicit_price.toLocaleString()}` : '-'}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="bg-white rounded-xl shadow-sm p-4">
+                                            <h3 className="font-semibold text-gray-800 mb-3">VIF (Multicolinealidad)</h3>
+                                            <div className="space-y-2">
+                                                {Object.entries(sampleHedonicData.vif).map(([k, v]) => (
+                                                    <div key={k} className="flex items-center gap-2">
+                                                        <span className="text-sm text-gray-600 w-28">{k}</span>
+                                                        <div className="flex-1 h-4 bg-gray-100 rounded overflow-hidden">
+                                                            <div className={`h-full ${v > 5 ? 'bg-yellow-500' : 'bg-green-500'}`} style={{width: `${(v/10)*100}%`}}></div>
+                                                        </div>
+                                                        <span className="text-sm font-medium w-8">{v.toFixed(1)}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <p className="text-xs text-gray-500 mt-2">VIF &lt; 5: OK | VIF &gt; 10: Problema</p>
+                                        </div>
+
+                                        <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+                                            <h3 className="font-semibold text-blue-800 mb-2">💡 Interpretación</h3>
+                                            <ul className="text-sm text-blue-700 space-y-1">
+                                                <li>• Cada m² adicional aumenta el precio en <strong>$820,000 CLP</strong></li>
+                                                <li>• Un dormitorio adicional vale <strong>$12.5M CLP</strong></li>
+                                                <li>• Cada metro más de distancia al metro reduce <strong>$18,500 CLP</strong></li>
+                                                <li>• El modelo explica el <strong>84.7%</strong> de la variación</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Ecosystem Services View
+        const EcosystemView = () => {
+            const [valuations, setValuations] = useState([
+                { id: 'parque_001', biome: 'Área Verde Urbana', area: 25, annual: 145250, npv: 2845000 },
+                { id: 'humedal_001', biome: 'Humedal', area: 10, annual: 88700, npv: 1738000 },
+            ]);
+
+            const totalAnnual = valuations.reduce((s, v) => s + v.annual, 0);
+            const totalNPV = valuations.reduce((s, v) => s + v.npv, 0);
+            const totalArea = valuations.reduce((s, v) => s + v.area, 0);
+
+            return (
+                <div className="p-6">
+                    <div className="flex items-center justify-between mb-6">
+                        <div>
+                            <h1 className="text-2xl font-bold text-gray-800">Servicios Ecosistémicos</h1>
+                            <p className="text-gray-500">Valoración de servicios ecosistémicos y capital natural</p>
+                        </div>
+                        <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">M-ESV v4.0</span>
+                    </div>
+
+                    <div className="grid grid-cols-4 gap-4 mb-6">
+                        <div className="bg-white rounded-xl shadow-sm p-4">
+                            <div className="text-sm text-gray-500">Valor Anual Total</div>
+                            <div className="text-2xl font-bold text-green-600">${totalAnnual.toLocaleString()}</div>
+                            <div className="text-xs text-gray-400">USD/año</div>
+                        </div>
+                        <div className="bg-white rounded-xl shadow-sm p-4">
+                            <div className="text-sm text-gray-500">Valor NPV (30 años)</div>
+                            <div className="text-2xl font-bold text-blue-600">${totalNPV.toLocaleString()}</div>
+                            <div className="text-xs text-gray-400">Tasa: 3%</div>
+                        </div>
+                        <div className="bg-white rounded-xl shadow-sm p-4">
+                            <div className="text-sm text-gray-500">Área Total</div>
+                            <div className="text-2xl font-bold text-emerald-600">{totalArea} ha</div>
+                        </div>
+                        <div className="bg-white rounded-xl shadow-sm p-4">
+                            <div className="text-sm text-gray-500">Polígonos</div>
+                            <div className="text-2xl font-bold text-purple-600">{valuations.length}</div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-6">
+                        <div className="space-y-4">
+                            <div className="bg-white rounded-xl shadow-sm p-4">
+                                <h3 className="font-semibold text-gray-800 mb-4">Nueva Valoración</h3>
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">ID Polígono</label>
+                                        <input type="text" placeholder="ej: parque_002" className="w-full border rounded-lg p-2" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Área (hectáreas)</label>
+                                        <input type="number" defaultValue="10" className="w-full border rounded-lg p-2" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Bioma</label>
+                                        <select className="w-full border rounded-lg p-2">
+                                            <option>Área Verde Urbana</option>
+                                            <option>Humedal</option>
+                                            <option>Bosque Templado</option>
+                                            <option>Zona Costera</option>
+                                            <option>Pradera</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Región</label>
+                                        <select className="w-full border rounded-lg p-2">
+                                            <option>Zona Central</option>
+                                            <option>Zona Sur</option>
+                                            <option>Zona Austral</option>
+                                            <option>Norte Chico</option>
+                                        </select>
+                                    </div>
+                                    <button className="w-full bg-green-600 text-white py-2.5 rounded-lg font-medium hover:bg-green-700 transition">
+                                        Agregar Valoración
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="bg-white rounded-xl shadow-sm p-4">
+                                <h3 className="font-semibold text-gray-800 mb-3">Valores por Bioma</h3>
+                                <div className="space-y-2">
+                                    {ecosystemBiomes.map((b, i) => (
+                                        <div key={i} className="flex justify-between items-center p-2 bg-gray-50 rounded text-sm">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 rounded" style={{backgroundColor: b.color}}></div>
+                                                <span>{b.name}</span>
+                                            </div>
+                                            <span className="font-medium text-green-600">${b.value.toLocaleString()}/ha/año</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="col-span-2 space-y-4">
+                            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+                                <div className="px-4 py-3 bg-gray-50 border-b flex justify-between items-center">
+                                    <h3 className="font-semibold text-gray-800">Valoraciones</h3>
+                                    <button className="text-sm text-red-600">Limpiar todo</button>
+                                </div>
+                                <div className="divide-y">
+                                    {valuations.map((v, i) => (
+                                        <div key={i} className="p-4">
+                                            <div className="flex justify-between items-start mb-3">
+                                                <div>
+                                                    <div className="font-medium text-gray-900">{v.id}</div>
+                                                    <div className="text-sm text-gray-500">{v.biome} | {v.area} ha</div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="font-semibold text-green-600">${v.annual.toLocaleString()}/año</div>
+                                                    <div className="text-sm text-blue-600">NPV: ${v.npv.toLocaleString()}</div>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-4 gap-2 text-xs">
+                                                <div className="bg-gray-50 p-2 rounded text-center">
+                                                    <div className="text-gray-500">Regulación Clima</div>
+                                                    <div className="font-medium">$1,200/ha</div>
+                                                </div>
+                                                <div className="bg-gray-50 p-2 rounded text-center">
+                                                    <div className="text-gray-500">Recreación</div>
+                                                    <div className="font-medium">$1,680/ha</div>
+                                                </div>
+                                                <div className="bg-gray-50 p-2 rounded text-center">
+                                                    <div className="text-gray-500">Calidad Aire</div>
+                                                    <div className="font-medium">$1,120/ha</div>
+                                                </div>
+                                                <div className="bg-gray-50 p-2 rounded text-center">
+                                                    <div className="text-gray-500">Agua</div>
+                                                    <div className="font-medium">$890/ha</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+                                <h4 className="font-medium text-blue-800 mb-2">📊 Metodología</h4>
+                                <ul className="text-sm text-blue-700 space-y-1">
+                                    <li>• Valores basados en ESVD (Ecosystem Services Valuation Database)</li>
+                                    <li>• Metodología de benefit transfer ajustada para Chile</li>
+                                    <li>• NPV calculado con tasa de descuento del 3% a 30 años</li>
+                                    <li>• Compatible con SEEA-EA y marcos TNFD</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Valuation Advisor View
+        const AdvisorView = () => {
+            const [showResult, setShowResult] = useState(false);
+
+            return (
+                <div className="p-6">
+                    <div className="flex items-center justify-between mb-6">
+                        <div>
+                            <h1 className="text-2xl font-bold text-gray-800">Asistente de Métodos de Valuación</h1>
+                            <p className="text-gray-500">Recomendación inteligente del método de valuación óptimo</p>
+                        </div>
+                        <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">M-VAD v4.0</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-6">
+                        <div className="bg-white rounded-xl shadow-sm p-6">
+                            <h2 className="font-semibold text-gray-800 mb-4 text-lg">Contexto de la Valuación</h2>
+                            
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Activo *</label>
+                                    <select className="w-full border rounded-lg p-2.5">
+                                        <option>Propiedad Residencial</option>
+                                        <option>Propiedad Comercial</option>
+                                        <option>Terreno</option>
+                                        <option>Activo Natural</option>
+                                        <option>Portafolio</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Propósito *</label>
+                                    <select className="w-full border rounded-lg p-2.5">
+                                        <option>Colateral/Garantía</option>
+                                        <option>Transacción de Mercado</option>
+                                        <option>Reportes Financieros</option>
+                                        <option>Análisis de Inversión</option>
+                                        <option>Reportes ESG</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Calidad de Datos</label>
+                                    <select className="w-full border rounded-lg p-2.5">
+                                        <option>Buena</option>
+                                        <option>Excelente</option>
+                                        <option>Moderada</option>
+                                        <option>Limitada</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Disponibilidad de Comparables: 75%</label>
+                                    <input type="range" defaultValue="75" className="w-full" />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <input type="checkbox" defaultChecked className="rounded" />
+                                    <span className="text-sm text-gray-700">El activo genera ingresos</span>
+                                </div>
+                                <button 
+                                    onClick={() => setShowResult(true)}
+                                    className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition"
+                                >
+                                    Obtener Recomendación
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            {!showResult ? (
+                                <div className="bg-white rounded-xl shadow-sm p-8 text-center">
+                                    <div className="text-6xl mb-4">🎯</div>
+                                    <p className="text-gray-500">Complete el formulario para obtener una recomendación personalizada</p>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl shadow-sm p-6 text-white">
+                                        <div className="text-sm opacity-80">Método Recomendado</div>
+                                        <div className="text-2xl font-bold mb-2">Comparación de Mercado</div>
+                                        <div className="flex gap-2 text-sm mb-3">
+                                            <span className="bg-white/20 px-2 py-1 rounded">Score: 87/100</span>
+                                            <span className="bg-white/20 px-2 py-1 rounded">±5% precisión</span>
+                                        </div>
+                                        <p className="text-sm opacity-90">
+                                            Alta disponibilidad de comparables y propósito de colateral requieren método tradicional con compliance Basel IV.
+                                        </p>
+                                        <div className="flex gap-2 mt-4">
+                                            <span className="bg-green-500/80 px-2 py-0.5 rounded text-xs">✓ IVS</span>
+                                            <span className="bg-green-500/80 px-2 py-0.5 rounded text-xs">✓ RICS</span>
+                                            <span className="bg-green-500/80 px-2 py-0.5 rounded text-xs">✓ Basel</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white rounded-xl shadow-sm p-4">
+                                        <h4 className="font-medium text-gray-800 mb-3">Métodos Alternativos</h4>
+                                        <div className="space-y-2">
+                                            {advisorMethods.slice(1).map((m, i) => (
+                                                <div key={i} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                                                    <span className="font-medium">{m.name}</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm text-gray-500">Score: {m.score}</span>
+                                                        <span className="text-xs bg-gray-200 px-2 py-0.5 rounded">Media</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-purple-50 rounded-xl p-4 border border-purple-200">
+                                        <h4 className="font-medium text-purple-800 mb-2">💡 Enfoque Híbrido Sugerido</h4>
+                                        <p className="text-sm text-purple-700">
+                                            Combinar Comparación de Mercado (70%) + Hedónico (30%) para mayor explicabilidad y robustez.
+                                        </p>
+                                    </div>
+
+                                    <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
+                                        <h4 className="font-medium text-amber-800 mb-2">📋 Notas Regulatorias</h4>
+                                        <p className="text-sm text-amber-700">
+                                            Método cumple con NCG 514 CMF y Basel IV para garantías hipotecarias. Requiere actualización anual.
+                                        </p>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Placeholder Views
+        const PlaceholderView = ({ title, module }) => (
+            <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                    <h1 className="text-2xl font-bold text-gray-800">{title}</h1>
+                    {module && <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm font-medium">{module}</span>}
+                </div>
+                <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+                    <div className="text-6xl mb-4">🚧</div>
+                    <h2 className="text-xl font-semibold text-gray-800 mb-2">Vista en Desarrollo</h2>
+                    <p className="text-gray-500">Esta vista está disponible en la versión completa de DATAPOLIS v4.0</p>
+                </div>
+            </div>
+        );
+
+        // Main App
+        const App = () => {
+            const [currentView, setCurrentView] = useState('dashboard');
+
+            const renderView = () => {
+                switch(currentView) {
+                    case 'dashboard': return <DashboardView />;
+                    case 'hedonic': return <HedonicView />;
+                    case 'ecosystem': return <EcosystemView />;
+                    case 'advisor': return <AdvisorView />;
+                    case 'natural-capital': return <PlaceholderView title="Capital Natural" module="M-NCA v4.0" />;
+                    case 'env-hub': return <PlaceholderView title="Environmental Hub" module="M-ENV v4.0" />;
+                    case 'expedientes': return <PlaceholderView title="Expedientes" module="M00 v3.0" />;
+                    case 'copropiedades': return <PlaceholderView title="Copropiedades" module="M02 v3.0" />;
+                    case 'plusvalia': return <PlaceholderView title="Plusvalías" module="GT-PV v3.0" />;
+                    case 'credit': return <PlaceholderView title="Credit Scoring" module="M03 v3.0" />;
+                    default: return <DashboardView />;
+                }
+            };
+
+            return (
+                <div className="flex min-h-screen">
+                    <Sidebar currentView={currentView} setCurrentView={setCurrentView} />
+                    <div className="flex-1 bg-gray-100 overflow-auto">
+                        {renderView()}
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
